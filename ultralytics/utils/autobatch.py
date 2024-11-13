@@ -72,7 +72,7 @@ def autobatch(model, imgsz=640, ch=3, fraction=0.60, batch_size=DEFAULT_CFG.batc
     batch_sizes = [1, 2, 4, 8, 16] if t < 16 else [1, 2, 4, 8, 16, 32, 64]
     try:
         img = [torch.empty(b, ch, imgsz, imgsz) for b in batch_sizes]
-        results = profile(img, model, n=1, device=device)
+        results = profile(img, model, n=3, device=device)
 
         # Fit a solution
         y = [x[2] for x in results if x]  # memory [2]

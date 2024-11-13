@@ -577,7 +577,7 @@ def merge_multi_segment(segments):
     return s
 
 
-def yolo_bbox2segment(im_dir, save_dir=None, sam_model="sam_b.pt"):
+def yolo_bbox2segment(im_dir, save_dir=None, sam_model="sam_b.pt", device=None):
     """
     Converts existing object detection dataset (bounding boxes) to segmentation dataset or oriented bounding box (OBB)
     in YOLO format. Generates segmentation data using SAM auto-annotator as needed.
@@ -587,6 +587,7 @@ def yolo_bbox2segment(im_dir, save_dir=None, sam_model="sam_b.pt"):
         save_dir (str | Path): Path to save the generated labels, labels will be saved
             into `labels-segment` in the same directory level of `im_dir` if save_dir is None. Default: None.
         sam_model (str): Segmentation model to use for intermediate segmentation data; optional.
+        device (int | str): The specific device to run SAM models. Default: None.
 
     Notes:
         The input directory structure assumed for dataset:

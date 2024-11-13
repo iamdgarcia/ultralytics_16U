@@ -322,7 +322,6 @@ class LoadImagesAndVideos:
     def __init__(self, path, batch=1, vid_stride=1):
         """Initialize dataloader for images and videos, supporting various input formats."""
         parent = None
-        print("INIT DATALOADER")
         if isinstance(path, str) and Path(path).suffix == ".txt":  # *.txt file with img/vid/dir on each line
             parent = Path(path).parent
             path = Path(path).read_text().splitlines()  # list of sources
@@ -421,12 +420,13 @@ class LoadImagesAndVideos:
                     with Image.open(path) as img:
                         im0 = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)  # convert image to BGR nparray
                 else:
-                    im0 = cv2.imread(path, cv2.IMREAD_UNCHANGED)  # BGR
+                    im0 = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+                    if im0.ndim == 2:  # Grayscale image
+                        im0 = np.expand_dims(im0, axis=-1)
+                        im0 = np.ascontiguousarray(im0)
                 if im0 is None:
                     LOGGER.warning(f"WARNING ⚠️ Image Read Error {path}")
                 else:
-                    if im0.ndim == 2:  # Grayscale image
-                        im0 = np.expand_dims(im0, axis=-1)
                     paths.append(path)
                     imgs.append(im0)
                     info.append(f"image {self.count + 1}/{self.nf} {path}: ")
@@ -450,9 +450,9 @@ class LoadImagesAndVideos:
         return math.ceil(self.nf / self.bs)  # number of batches
 
 
-class LoadNumpy:
+class LoadPilAndNumpy:
     """
-    Load images from numpy arrays for batch processing.
+    Load images from PIL and Numpy arrays for batch processing.
 
     This class manages loading and pre-processing of image data from both PIL and Numpy formats. It performs basic
     validation and format conversion to ensure that the images are in the required format for downstream processing.
@@ -587,29 +587,41 @@ class LoadTensor:
 
 
 def autocast_list(source):
-    """Merges a list of sources into a list of numpy arrays or PIL images for Ultralytics prediction."""
+    """Merges a list of source of different types into a list of numpy arrays."""
+    # files = []
+    # for im in source:
+    #     if isinstance(im, (str, Path)):  # filename or uri
+    #         if str(im).startswith("http"):
+    #             # Read image from URL
+    #             resp = requests.get(im)
+    #             img_array = np.asarray(bytearray(resp.content), dtype=np.uint8)  # WARNING: Forces image to uint8
+    #             im = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
+    #         else:
+    #             # Read image from file
+    #             im = cv2.imread(str(im), cv2.IMREAD_UNCHANGED)
+    #         if im is None:
+    #             raise FileNotFoundError(f"Image not found or unable to read {im}")
+    #         files.append(im)
+    #     elif isinstance(im, (Image.Image, np.ndarray)):  # np Image
+    #         files.append(im)
+    #     else:
+    #         raise TypeError(
+    #             f"type {type(im).__name__} is not a supported Ultralytics prediction source type. \n"
+    #             f"See https://docs.ultralytics.com/modes/predict for supported source types."
+    #         )
+
+    # return files
     files = []
     for im in source:
         if isinstance(im, (str, Path)):  # filename or uri
-            if str(im).startswith("http"):
-                # Read image from URL
-                resp = requests.get(im)
-                img_array = np.asarray(bytearray(resp.content), dtype=np.uint8)  # WARNING: Forces image to uint8
-                im = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
-            else:
-                # Read image from file
-                im = cv2.imread(str(im), cv2.IMREAD_UNCHANGED)
-            if im is None:
-                raise FileNotFoundError(f"Image not found or unable to read {im}")
-            files.append(im)
-        elif isinstance(im, (Image.Image, np.ndarray)):  # np Image
+            files.append(Image.open(requests.get(im, stream=True).raw if str(im).startswith("http") else im))
+        elif isinstance(im, (Image.Image, np.ndarray)):  # PIL or np Image
             files.append(im)
         else:
             raise TypeError(
                 f"type {type(im).__name__} is not a supported Ultralytics prediction source type. \n"
                 f"See https://docs.ultralytics.com/modes/predict for supported source types."
             )
-
     return files
 
 
@@ -667,4 +679,4 @@ def get_best_youtube_url(url, method="pytube"):
 
 
 # Define constants
-LOADERS = (LoadStreams, LoadNumpy, LoadImagesAndVideos, LoadScreenshots)
+LOADERS = (LoadStreams, LoadPilAndNumpy, LoadImagesAndVideos, LoadScreenshots)

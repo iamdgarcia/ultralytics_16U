@@ -13,7 +13,6 @@ from tarfile import is_tarfile
 
 import cv2
 import numpy as np
-from PIL import Image
 
 from ultralytics.nn.autobackend import check_class_names
 from ultralytics.utils import (
@@ -53,21 +52,6 @@ def get_hash(paths):
     h = hashlib.sha256(str(size).encode())  # hash sizes
     h.update("".join(paths).encode())  # hash paths
     return h.hexdigest()  # return hash
-
-
-def exif_size(img: Image.Image):
-    """Returns exif-corrected PIL size."""
-    s = img.size  # (width, height)
-    if img.format == "JPEG":  # only support JPEG images
-        try:
-            exif = img.getexif()
-            if exif:
-                rotation = exif.get(274, None)  # the EXIF key for the orientation tag is 274
-                if rotation in {6, 8}:  # rotation 270 or 90
-                    s = s[1], s[0]
-        except Exception:
-            pass
-    return s
 
 
 def verify_image(args):

@@ -852,7 +852,6 @@ class LetterBox:
         new_shape = labels.pop("rect_shape", self.new_shape)
         if isinstance(new_shape, int):
             new_shape = (new_shape, new_shape)
-
         # Scale ratio (new / old)
         r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
         if not self.scaleup:  # only scale down, do not scale up (for better val mAP)
@@ -882,6 +881,8 @@ class LetterBox:
         )  # add border
         if labels.get("ratio_pad"):
             labels["ratio_pad"] = (labels["ratio_pad"], (left, top))  # for evaluation
+        if (len(img.shape)) == 2:
+            img = np.expand_dims(img, -1)
 
         if len(labels):
             labels = self._update_labels(labels, ratio, dw, dh)
@@ -1184,7 +1185,7 @@ class Format:
             labels["batch_idx"] = torch.zeros(nl)
         return labels
 
-    def _format_img(self, img, image_channels=3):
+    def _format_img(self, img):
         """
         Formats an image for YOLO from a Numpy array to a PyTorch tensor.
 
@@ -1215,14 +1216,13 @@ class Format:
             img = np.expand_dims(img, -1)  # Add a channel dimension
 
         img = img.transpose(2, 0, 1)  # Convert from HWC to CHW format
-
         # Adjust the number of channels to match `image_channels`
-        if img.shape[0] < image_channels:
+        if img.shape[0] < self.image_channels:
             # If the image has fewer channels, repeat the channels to match the target
-            img = np.tile(img, (image_channels // img.shape[0], 1, 1))[:image_channels, :, :]
-        elif img.shape[0] > image_channels:
+            img = np.tile(img, (self.image_channels // img.shape[0], 1, 1))[: self.image_channels, :, :]
+        elif img.shape[0] > self.image_channels:
             # If the image has more channels, select the first `image_channels`
-            img = img[:image_channels, :, :]
+            img = img[: self.image_channels, :, :]
 
         # Optionally swap channels (e.g., BGR to RGB)
         if img.shape[0] == 3 and random.uniform(0, 1) > self.bgr:
